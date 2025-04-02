@@ -59,4 +59,4 @@ jobs:
       - name: Execute script
         run: |
           # Add --disable-nodegroup-eviction flag to skip service cleanup
-          ./eksctl/remove_cluster.sh || ./eksctl/remove_cluster.sh --disable-nodegroup-eviction
+          ./eksctl/remove_cluster.sh --force || ./eksctl/remove_cluster.sh --disable-nodegroup-eviction
