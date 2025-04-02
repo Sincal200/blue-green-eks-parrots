@@ -8,6 +8,7 @@ on:
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
+  CLUSTER_NAME: K8S-Blue-Green # Add the cluster name as an environment variable
 
 # Used for getting permissions to AWS resources through an OIDC federation
 permissions:
@@ -20,7 +21,7 @@ jobs:
     steps:
       # Check out code
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       
       # Configure AWS credentials using assumed role
       - name: 'Configure AWS credentials'
@@ -41,11 +42,21 @@ jobs:
           curl -sL "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_checksums.txt" | grep $PLATFORM | sha256sum --check
           tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
           sudo mv /tmp/eksctl /usr/local/bin
+      
+      # Install and configure kubectl
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        
+      # Update kubeconfig to authenticate with the cluster
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
           
       # Make script executable
       - name: Make script executable
         run: chmod +x eksctl/remove_cluster.sh
 
-      # Execute script to remove the EKS cluster
+      # Execute script to remove the EKS cluster with error handling
       - name: Execute script
-        run: ./eksctl/remove_cluster.sh
+        run: |
+          # Add --disable-nodegroup-eviction flag to skip service cleanup
+          ./eksctl/remove_cluster.sh || ./eksctl/remove_cluster.sh --disable-nodegroup-eviction
